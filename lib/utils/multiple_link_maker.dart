@@ -2,7 +2,7 @@ import 'dart:core';
 
 class MultipleLinkMaker {
   List<String> generateStringsBetween(String str1, String str2) {
-    // استخراج تمام اعداد از هر رشته و ذخیره طول آنها
+    // لاستخراج تمام اعداد از هر رشته و ذخیره طول آنها
     final matches1 = RegExp(r'\d+').allMatches(str1).toList();
     final matches2 = RegExp(r'\d+').allMatches(str2).toList();
 
