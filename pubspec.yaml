@@ -4,7 +4,7 @@ description: "A new Flutter project."
 publish_to: 'none'
 
 
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: '>=3.2.2 <4.0.0'
@@ -25,6 +25,8 @@ dependencies:
   flutter_foreground_task: ^8.8.1+1
   dio: ^5.7.0
   flutter_native_splash: ^2.4.3
+  animations: ^2.0.11
+  flutter_svg: ^2.0.16
 
 dev_dependencies:
   flutter_test:
@@ -39,7 +41,8 @@ flutter:
 
   uses-material-design: true
 
-
+  assets:
+    - assets/svg/
 
 flutter_native_splash:
 

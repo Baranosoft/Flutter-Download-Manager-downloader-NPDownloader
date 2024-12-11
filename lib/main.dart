@@ -5,9 +5,11 @@ import 'package:noarman_professional_downloader/pages/add_download_page.dart';
 import 'dart:async';
 import 'package:noarman_professional_downloader/pages/downloaded_page.dart';
 import 'package:noarman_professional_downloader/pages/downloading_page.dart';
+import 'package:noarman_professional_downloader/pages/settings_page.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:noarman_professional_downloader/services/download_service.dart' as download_service;
+import 'package:animations/animations.dart';
 
 
 Future<void> main() async {
@@ -143,13 +145,16 @@ class _HomePageState extends State<HomePage> {
     });
 
     pages = <Widget>[
-      Downloadedpage(onCallback: () {
-        refreshService();
-      }),
       AddDownloadPage(onCallback: () {
         refreshService();
       }),
       DownloadingPage(onCallback: () {
+        refreshService();
+      }),
+      Downloadedpage(onCallback: () {
+        refreshService();
+      }),
+      SettingsPage(onCallback: () {
         refreshService();
       })
     ];
@@ -169,7 +174,17 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Directionality(textDirection: ui.TextDirection.rtl, child: Scaffold(
-      body: pages![selectedPage],
+      body: PageTransitionSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (Widget child, Animation<double> primaryAnimation, Animation<double> secondaryAnimation) {
+          return FadeThroughTransition(
+            animation: primaryAnimation,
+            secondaryAnimation: secondaryAnimation,
+            child: child,
+          );
+        },
+        child: pages![selectedPage],
+      ),
       bottomNavigationBar: NavigationBar(
         onDestinationSelected: (int index) {
           setState(() {
@@ -177,9 +192,10 @@ class _HomePageState extends State<HomePage> {
           });
         },
         destinations: const <Widget>[
-          NavigationDestination(icon: Icon(Icons.download_done_rounded), label: 'بارگیری شده'),
           NavigationDestination(icon: Icon(Icons.add_rounded), label: 'افزودن'),
-          NavigationDestination(icon: Icon(Icons.downloading_rounded), label: 'درحال بارگیری')
+          NavigationDestination(icon: Icon(Icons.downloading_rounded), label: 'درحال بارگیری'),
+          NavigationDestination(icon: Icon(Icons.download_done_rounded), label: 'بارگیری شده'),
+          NavigationDestination(icon: Icon(Icons.settings), label: 'تنظیمات')
         ],
         selectedIndex: selectedPage,
       )

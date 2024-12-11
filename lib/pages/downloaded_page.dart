@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:open_file/open_file.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class Downloadedpage extends StatefulWidget {
 
@@ -25,7 +26,6 @@ class _DownloadedpageState extends State<Downloadedpage> {
   var formatClass = TimeSizeFormat();
 
   var deleteClass = DeleteFile();
-
 
 
   @override
@@ -248,7 +248,28 @@ class _DownloadedpageState extends State<Downloadedpage> {
     return Directionality(
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
-        body: SafeArea(
+        body: items.length == 0
+        
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  height: 300,
+                  width: 300,
+                  child: SvgPicture.asset(
+                    'assets/svg/empty_downloaded.svg',
+                  ),
+                ),
+                
+                const SizedBox(height: 5),
+
+                const Text('فایلی دانلود نشده')
+              ]
+            )
+        )
+
+        : SafeArea(
           child: Padding(
             padding: const EdgeInsets.only(bottom: 0, left: 5, right: 5, top: 10),
             child: Column(

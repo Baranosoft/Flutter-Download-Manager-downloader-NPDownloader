@@ -3,6 +3,7 @@ import 'package:noarman_professional_downloader/utils/delete_file.dart';
 import 'package:noarman_professional_downloader/utils/time_size_format.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import 'package:flutter_svg/flutter_svg.dart';
 
 
 class DownloadingPage extends StatefulWidget {
@@ -28,6 +29,11 @@ class _DownloadingPageState extends State<DownloadingPage> {
   var formatClass = TimeSizeFormat();
 
   var deleteClass = DeleteFile();
+
+  final Widget emptySVG = SvgPicture.asset(
+    'assets/empty_downloading',
+    semanticsLabel: 'Empty Downloading',
+  );
 
   @override
   void initState() {
@@ -201,9 +207,28 @@ class _DownloadingPageState extends State<DownloadingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.only(left: 10, bottom: 0, right: 10, top: 10),
-        child: ListView.builder(
+      body: items.length == 0
+
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  height: 300,
+                  width: 300,
+                  child: SvgPicture.asset(
+                    'assets/svg/empty_downloading.svg',
+                  ),
+                ),
+                
+                const SizedBox(height: 5),
+
+                const Text('فایلی در حال دانلود نیست')
+              ]
+            )
+        )
+        
+        : SafeArea(child: ListView.builder(
           itemCount: items.length,
           itemBuilder: (context, index) {
         
@@ -287,7 +312,7 @@ class _DownloadingPageState extends State<DownloadingPage> {
             );
         
           },
-        ),
-      ));
+        ))
+    );
   }
 }
