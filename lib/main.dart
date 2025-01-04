@@ -6,10 +6,12 @@ import 'dart:async';
 import 'package:noarman_professional_downloader/pages/downloaded_page.dart';
 import 'package:noarman_professional_downloader/pages/downloading_page.dart';
 import 'package:noarman_professional_downloader/pages/settings_page.dart';
+import 'package:noarman_professional_downloader/theme/theme_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:noarman_professional_downloader/services/download_service.dart' as download_service;
 import 'package:animations/animations.dart';
+import 'package:provider/provider.dart';
 
 
 Future<void> main() async {
@@ -18,32 +20,35 @@ Future<void> main() async {
 
   FlutterForegroundTask.initCommunicationPort();
 
-  runApp(const MyApp());
+  final themeProvider = ThemeProvider();
+  await themeProvider.loadPreferences();
+
+  runApp(
+    MyApp(themeProvider: themeProvider)
+  );
 
 }
 
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+
+  final ThemeProvider themeProvider;
+
+  const MyApp({super.key, required this.themeProvider});
 
   @override
   Widget build(BuildContext context) {
 
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      systemNavigationBarColor: ui.Color.fromARGB(255, 236, 239, 236), // رنگ نوار ناوبری
-      systemNavigationBarIconBrightness: Brightness.light, // رنگ آیکون‌ها
-    ));
-
-    return MaterialApp(
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          
-          seedColor: Colors.green,
-          brightness: Brightness.light,
-        ),
-      ),
-      home: const HomePage(),
+    return ChangeNotifierProvider.value(
+      value: themeProvider,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            theme: themeProvider.themeData,
+            home: const HomePage(),
+          );
+        }
+      )
     );
   }
 }
@@ -78,21 +83,22 @@ class _HomePageState extends State<HomePage> {
   }
 
 
+  // تعریف سرویس
   void _initService() {
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'foreground_service',
         channelName: 'NPDownloader Notification',
         channelDescription: 'This is NPDownloader Notification',
-        channelImportance: NotificationChannelImportance.HIGH,
-        priority: NotificationPriority.HIGH,
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
       ),
       iosNotificationOptions: const IOSNotificationOptions(
         showNotification: false,
         playSound: false,
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
-        eventAction: ForegroundTaskEventAction.repeat(3000),
+        eventAction: ForegroundTaskEventAction.repeat(55000),
         autoRunOnBoot: true,
         autoRunOnMyPackageReplaced: true,
         allowWakeLock: true,
@@ -102,6 +108,7 @@ class _HomePageState extends State<HomePage> {
   }
 
 
+  // راه‌اندازی سرویس
   Future<ServiceRequestResult> _startService() async {
     if (await FlutterForegroundTask.isRunningService) {
       return FlutterForegroundTask.restartService();
@@ -121,6 +128,7 @@ class _HomePageState extends State<HomePage> {
   }
 
 
+  // در صورت ایجاد تغییرات در دانلودها سرویس دانلود از طریق این فانکشن رفرش می‌شود
   Future<void> refreshService() async {
 
     bool isRining = await FlutterForegroundTask.isRunningService;
@@ -144,6 +152,8 @@ class _HomePageState extends State<HomePage> {
       _initService();
     });
 
+
+    // لیست تب‌ها
     pages = <Widget>[
       AddDownloadPage(onCallback: () {
         refreshService();
@@ -161,7 +171,7 @@ class _HomePageState extends State<HomePage> {
   }
 
 
-  int selectedPage = 1;
+  int selectedPage = 0;
   List<Widget>? pages;
 
 
@@ -174,8 +184,19 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Directionality(textDirection: ui.TextDirection.rtl, child: Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(0), // ارتفاع AppBar صفر
+        child: AppBar(
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Theme.of(context).colorScheme.surface,
+            statusBarIconBrightness: (Theme.of(context).brightness == Brightness.dark) ? Brightness.light : Brightness.dark,
+            systemNavigationBarColor: Theme.of(context).colorScheme.surfaceContainer,
+          ),
+          elevation: 0, // حذف سایه
+          backgroundColor: Colors.transparent, // شفاف کردن AppBar
+        ),
+      ),
       body: PageTransitionSwitcher(
-        duration: const Duration(milliseconds: 300),
         transitionBuilder: (Widget child, Animation<double> primaryAnimation, Animation<double> secondaryAnimation) {
           return FadeThroughTransition(
             animation: primaryAnimation,
@@ -193,9 +214,9 @@ class _HomePageState extends State<HomePage> {
         },
         destinations: const <Widget>[
           NavigationDestination(icon: Icon(Icons.add_rounded), label: 'افزودن'),
-          NavigationDestination(icon: Icon(Icons.downloading_rounded), label: 'درحال بارگیری'),
+          NavigationDestination(icon: Icon(Icons.downloading_rounded), selectedIcon: Icon(Icons.download_for_offline_rounded), label: 'درحال بارگیری'),
           NavigationDestination(icon: Icon(Icons.download_done_rounded), label: 'بارگیری شده'),
-          NavigationDestination(icon: Icon(Icons.settings), label: 'تنظیمات')
+          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'تنظیمات')
         ],
         selectedIndex: selectedPage,
       )

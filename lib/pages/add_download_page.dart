@@ -28,6 +28,10 @@ class _AddDownloadPageState extends State<AddDownloadPage> {
   final TextEditingController _fileNameController = TextEditingController();
   final TextEditingController _directoryController = TextEditingController();
   final TextEditingController _startTimeController = TextEditingController();
+
+  bool isLinkControllerEmpty = false;
+  bool isFileNameControllerEmpty = false;
+
   String _fileSizeController = 'در حال دریافت...';
 
   var formatClass = TimeSizeFormat();
@@ -144,6 +148,7 @@ class _AddDownloadPageState extends State<AddDownloadPage> {
   }
 
 
+  // فانکشن حذف دانلود
   Future<void> deleteDownload(String fileName, String directory, bool fileDelete) async {
 
     deleteClass.deleteDownload(fileName, directory, fileDelete);
@@ -155,6 +160,7 @@ class _AddDownloadPageState extends State<AddDownloadPage> {
   }
 
 
+  // افزودن فهرست دانلود چندتایی
   void addMultipleDownloadLinks (String link1, String link2, String filename, String directory, String starttime) {
 
     List<String> multipleLinksList = []; 
@@ -173,17 +179,12 @@ class _AddDownloadPageState extends State<AddDownloadPage> {
   }
 
 
-  //اضافه کردن دانلود جدید
+  // افزودن دانلود جدید
   Future<void> addScheduledDownload(String url, String filename, String directory, String starttime, bool isFinalLink) async {
-    
-    print('url');
-    print('filename');
-    print(starttime);
-    print(directory);
 
     SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
 
-    //بررسی وجود فایل با اسم مشابه
+    // بررسی وجود فایل با اسم مشابه
     String? newDownload = await asyncPrefs.getString('$directory$filename');
 
     File file = File('$directory/$filename');
@@ -194,48 +195,57 @@ class _AddDownloadPageState extends State<AddDownloadPage> {
     }
 
     try {
-      //در صورتی که دانلود بدون زمان‌بندی باشد
+      // در صورتی که دانلود بدون زمان‌بندی باشد
       if (starttime == '') {
         if (!fileExist) {
           await downloadList.setStringList('$directory$filename', 
             <String>[url, filename, directory, starttime, 'queue', '0', checkInt(_fileSizeController) ? _fileSizeController : '1', '0'
           ]);
-          print(starttime);
+
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('این فایل در این محل ذخیره موجود است'),
-              duration: const Duration(seconds: 2),
-              action: SnackBarAction(label: 'حذف', onPressed: () {
-                deleteDownload(filename, directory, true);
-              }),
-            ),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('این فایل در این محل ذخیره موجود است'),
+                duration: const Duration(seconds: 2),
+                action: SnackBarAction(label: 'حذف', onPressed: () {
+                  deleteDownload(filename, directory, true);
+                }),
+              ),
+            );
+          }
+          
         }
 
-      //در صورتی که دانلود دارای زمان‌بندی باشد
+      // در صورتی که دانلود دارای زمان‌بندی باشد
       } else {
         if (newDownload == null) {
           await downloadList.setStringList('$directory$filename',
            <String>[url, filename, directory, starttime, 'scheduled', '0', checkInt(_fileSizeController) ? _fileSizeController : '1', '0'
           ]);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('این فایل در این محل ذخیره موجود است'),
-              duration: Duration(seconds: 2),
-            ),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('این فایل در این محل ذخیره موجود است'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+          
         }
       }
       if (isFinalLink && !fileExist) {
         widget.onCallback();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('به لیست دانلودها افزوده شد'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('به لیست دانلودها افزوده شد'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        
       }
       
     } catch(e) {
@@ -246,6 +256,7 @@ class _AddDownloadPageState extends State<AddDownloadPage> {
   }
 
 
+  // برای جلوگیری از نشست حافظه
   @override
   void dispose() {
     _linkController0.dispose();
@@ -261,154 +272,208 @@ class _AddDownloadPageState extends State<AddDownloadPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(onPressed: () {
-        if (isMultipleLink) {
-          addMultipleDownloadLinks(_linkController0.text,_linkController1.text,_fileNameController.text,_directoryController.text, _startTimeController.text);
+        if (_linkController0.text == '') {
+          setState(() {
+            isLinkControllerEmpty = true;
+          });
         } else {
-          addScheduledDownload(_linkController0.text,_fileNameController.text,_directoryController.text, _startTimeController.text, true);
+          if (_fileNameController.text == '') {
+            setState(() {
+              isFileNameControllerEmpty = true;
+            });
+          } else {
+          
+            if (isMultipleLink) {
+              addMultipleDownloadLinks(_linkController0.text,_linkController1.text,_fileNameController.text,_directoryController.text, _startTimeController.text);
+            } else {
+              addScheduledDownload(_linkController0.text,_fileNameController.text,_directoryController.text, _startTimeController.text, true);
+            }
+          }
         }
         
       },
       child: const Icon(Icons.add),
       ),
       body:  Padding(
-        padding: const EdgeInsets.only(bottom: 0, left: 10, right: 10, top: 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        padding: const EdgeInsets.only(bottom: 0, left: 10, right: 10, top: 20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
 
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.paste),
-                  onPressed: () {
-                    pasteLink(0);
-                  },
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _linkController0,
-                    onChanged: (newLink) {
-                      getFileNameFromUrl(newLink);
-                      getFileSizeFromUrl(newLink);
-                    },
-                    maxLines: 2,
-                    textAlign: TextAlign.left,
-                    decoration: const InputDecoration(labelText: 'لینک دانلود', border: OutlineInputBorder()),
-                  ),
-                ),
-                
-              ],
-            ),
-        
-            const SizedBox(height: 10,),
-
-            Row(children: [
-              const Text(
-                'حجم: ',
-                style: TextStyle(fontSize: 16),
-              ),
-              Text(
-                checkInt(_fileSizeController) ? formatClass.sizeFormat(int.parse(_fileSizeController)) : _fileSizeController,
-                style: TextStyle(color: checkInt(_fileSizeController) ? Colors.green : Colors.red[900], fontSize: 16),
-                
-              ),
-            ],),
-
-            const SizedBox(height: 5),
-
-            Align(alignment: Alignment.centerRight, child: Row(children: [
-              Checkbox(value: isMultipleLink, onChanged: (change) {
-                setState(() {
-                  isMultipleLink = (change != null) ? isMultipleLink = change : isMultipleLink = false;
-                });
-              }),
-              const SizedBox(width: 2),
-              const Text('دانلود چندتایی')
-              
-            ]),),
-
-            const SizedBox(height: 10
-            ),
-
-            if (isMultipleLink)
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.paste),
+                    icon: Icon(Icons.file_copy_rounded, color: Theme.of(context).colorScheme.primary,),
                     onPressed: () {
-                      pasteLink(1);
+                      pasteLink(0);
                     },
                   ),
                   Expanded(
                     child: TextField(
-                      controller: _linkController1,
+                      controller: _linkController0,
+                      onChanged: (newLink) {
+                        setState(() {
+                          if (isLinkControllerEmpty) {
+                            isLinkControllerEmpty = false;
+                          }
+                        });
+                        getFileNameFromUrl(newLink);
+                        getFileSizeFromUrl(newLink);
+                      },
                       maxLines: 2,
                       textAlign: TextAlign.left,
-                      decoration: const InputDecoration(labelText: 'لینک نهایی', border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                        labelText: 'لینک دانلود',
+                        border: const OutlineInputBorder(),
+                        errorText: isLinkControllerEmpty ? 'نام فایل را وارد کنید' : null,
+                        focusedBorder: isLinkControllerEmpty
+                        ? const OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Colors.red
+                            ),
+                          )
+
+                        : null
+                      ),
                     ),
                   ),
-                ]
+                  
+                ],
               ),
-            
-            if (!isMultipleLink)
-              TextField(
-                controller: _fileNameController,
-                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'نام فایل'),
-                textAlign: (_fileNameController.text.isNotEmpty) ? formatClass.textAlign(_fileNameController.text) : TextAlign.right,
-                style: const TextStyle(overflow: TextOverflow.clip),
-                maxLines: 2,
-              ),
-        
-            const SizedBox(height: 10,),
-        
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.folder_open),
-                  onPressed: () async {
-                    String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-                    if (selectedDirectory != null) {
-                      _directoryController.text = selectedDirectory;
-                    }
-                  },
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _directoryController,
-                    decoration: const InputDecoration(labelText: 'محل ذخیره‌سازی', border: OutlineInputBorder()),
-                  ),
-                ),
-              ],
-            ),
-        
-            const SizedBox(height: 10,),
-            
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.access_time),
-                  onPressed: () async {
-                    TimeOfDay? selectedTime = await showTimePicker(
-                      context: context,
-                      initialTime: TimeOfDay.now(),
-                    );
-                    if (selectedTime != null) {
-                      _startTimeController.text = selectedTime.format(context);
-                    }
-                  },
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _startTimeController,
-                    decoration: const InputDecoration(labelText: 'زمان شروع', border: OutlineInputBorder()),
-                    readOnly: true,
-                  ),
-                ),
-              ],
-            ),
+          
+              const SizedBox(height: 10,),
 
-          ],
-        ),
+              Row(children: [
+                const Text(
+                  'حجم: ',
+                  style: TextStyle(fontSize: 16),
+                ),
+                Text(
+                  checkInt(_fileSizeController) ? formatClass.sizeFormat(int.parse(_fileSizeController)) : _fileSizeController,
+                  style: TextStyle(color: checkInt(_fileSizeController) ? Colors.green : Theme.of(context).colorScheme.error, fontSize: 16),
+                  
+                ),
+              ],),
+
+              const SizedBox(height: 5),
+
+              Align(alignment: Alignment.centerRight, child: Row(children: [
+                Checkbox(value: isMultipleLink, onChanged: (change) {
+                  setState(() {
+                    isMultipleLink = (change != null) ? isMultipleLink = change : isMultipleLink = false;
+                  });
+                }),
+                const SizedBox(width: 2),
+                const Text('دانلود چندتایی')
+                
+              ]),),
+
+              const SizedBox(height: 10
+              ),
+
+              if (isMultipleLink)
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.file_copy_rounded, color: Theme.of(context).colorScheme.primary),
+                      onPressed: () {
+                        pasteLink(1);
+                      },
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: _linkController1,
+                        maxLines: 2,
+                        textAlign: TextAlign.left,
+                        decoration: const InputDecoration(labelText: 'لینک نهایی', border: OutlineInputBorder()),
+                      ),
+                    ),
+                  ]
+                ),
+              
+              if (!isMultipleLink)
+                TextField(
+                  controller: _fileNameController,
+                  onChanged: (newName) {
+                    setState(() {
+                      if (isFileNameControllerEmpty) {
+                        isFileNameControllerEmpty = false;
+                      }
+                    });
+                    
+                  },
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(), 
+                    labelText: 'نام فایل',
+                    focusedBorder: isFileNameControllerEmpty
+                      ? OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        )
+
+                      : null
+                  ),
+                  textAlign: (_fileNameController.text.isNotEmpty) ? formatClass.textAlign(_fileNameController.text) : TextAlign.right,
+                  style: const TextStyle(overflow: TextOverflow.clip),
+
+                  maxLines: 2,
+                ),
+          
+              const SizedBox(height: 10,),
+          
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.folder_rounded, color: Theme.of(context).colorScheme.primary ),
+                    onPressed: () async {
+                      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+                      if (selectedDirectory != null) {
+                        _directoryController.text = selectedDirectory;
+                      }
+                    },
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _directoryController,
+                      decoration: const InputDecoration(labelText: 'محل ذخیره‌سازی', border: OutlineInputBorder()),
+                    ),
+                  ),
+                ],
+              ),
+          
+              const SizedBox(height: 10),
+              
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.access_time_filled, color: Theme.of(context).colorScheme.primary),
+                    onPressed: () async {
+                      TimeOfDay? selectedTime = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
+                      if (selectedTime != null) {
+                        setState(() {
+                          _startTimeController.text = selectedTime.format(context);
+                        });
+                      }
+                    },
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _startTimeController,
+                      decoration: const InputDecoration(labelText: 'زمان شروع', border: OutlineInputBorder()),
+                      readOnly: true,
+                    ),
+                  ),
+                ],
+              ),
+
+            ],
+          ),
+        )
       )
     );
   }

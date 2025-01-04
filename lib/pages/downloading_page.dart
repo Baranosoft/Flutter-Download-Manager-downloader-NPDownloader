@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:noarman_professional_downloader/components/downloading_card.dart';
 import 'package:noarman_professional_downloader/utils/delete_file.dart';
 import 'package:noarman_professional_downloader/utils/time_size_format.dart';
+import 'package:open_file/open_file.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -65,7 +67,6 @@ class _DownloadingPageState extends State<DownloadingPage> {
     if (mounted) {
       setState(() {
         items = downloadList;
-        print(items);
       });
     }
   }
@@ -78,8 +79,6 @@ class _DownloadingPageState extends State<DownloadingPage> {
 
   Future<void> processEachKey() async {
 
-    print(data.toString());
-
     keys = await data.getKeys();
 
     downloadList.clear();
@@ -88,8 +87,7 @@ class _DownloadingPageState extends State<DownloadingPage> {
       for (String key in keys) {
         List<String>? value = await data.getStringList(key);
 
-        if (value != null && value.length > 4) {
-          print(value);
+        if (value != null && value.length > 5) {
           if (value[4] == 'queue' || value[4] == 'downloading' || value[4] == 'stopped' || value[4] == 'scheduled') {
             downloadList.add(value);
             downloadListKeys.add(key);
@@ -140,12 +138,20 @@ class _DownloadingPageState extends State<DownloadingPage> {
   }
 
 
-  bool checkInt(String value) {
-    if (int.tryParse(value) != null) {
-      return true;
-    } else {
-      return false;
+  void openFile(int index) async {
+    try {
+      await OpenFile.open('${downloadList[index][2]}/${downloadList[index][1]}');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('مشکل در باز کردن فایل: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
+    
   }
 
 
@@ -167,7 +173,7 @@ class _DownloadingPageState extends State<DownloadingPage> {
           ),
           actions: <Widget>[
             Align(alignment: Alignment.centerRight, child: TextButton(
-              child: Text('حذف', style: TextStyle(color: Colors.red[800])),
+              child: Text('حذف', style: TextStyle(color: Theme.of(context).colorScheme.error)),
               onPressed: () {
                 deleteDownload(index, false);
                 Navigator.of(context).pop();
@@ -175,7 +181,7 @@ class _DownloadingPageState extends State<DownloadingPage> {
             ),),
             
             Align(alignment: Alignment.centerRight, child: TextButton(
-              child: Text('حذف به همراه فایل', style: TextStyle(color: Colors.red[800])),
+              child: Text('حذف به همراه فایل', style: TextStyle(color: Theme.of(context).colorScheme.error)),
               onPressed: () {
                 deleteDownload(index, true);
                 Navigator.of(context).pop();
@@ -207,7 +213,7 @@ class _DownloadingPageState extends State<DownloadingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: items.length == 0
+      body: items.isEmpty
 
         ? Center(
             child: Column(
@@ -218,11 +224,15 @@ class _DownloadingPageState extends State<DownloadingPage> {
                   width: 300,
                   child: SvgPicture.asset(
                     'assets/svg/empty_downloading.svg',
+                    colorFilter: ColorFilter.mode(
+                      Theme.of(context).colorScheme.primaryFixedDim, // تنظیم رنگ
+                      BlendMode.modulate,
+                    ),
                   ),
                 ),
                 
                 const SizedBox(height: 5),
-
+ 
                 const Text('فایلی در حال دانلود نیست')
               ]
             )
@@ -232,87 +242,25 @@ class _DownloadingPageState extends State<DownloadingPage> {
           itemCount: items.length,
           itemBuilder: (context, index) {
         
-            return Card(child: 
-              Padding(
-                padding: const EdgeInsets.only(bottom: 5, left: 5, right: 5, top: 15),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Expanded(child: Text(items[index][1], style: const TextStyle(fontSize: 18), textAlign: formatClass.textAlign(items[index][1]),)) ,
-                    ],),
-                    
-                    const SizedBox(height: 5,),
-
-                    Row(children: [
-                      IconButton(onPressed: () {
-
-                        if (isButtonActive) {
-                          if (items[index][4] == 'stopped' || items[index][4] == 'scheduled') {
-                            setSituation(index, 'queue');
-                          } else if (items[index][4] == 'downloading' || items[index][4] == 'queue') {
-                            setSituation(index, 'stopped');
-                          }
-
-                          setState(() {
-                            isButtonActive = false;
-                          });
-
-                          Timer(const Duration(seconds: 1), () {
-                            setState(() {
-                              isButtonActive = true;
-                            });
-                          });
-                        }
-                        
-                      }, icon: Icon(items[index][4] == 'stopped' || items[index][4] == 'scheduled' ? Icons.play_arrow : Icons.pause),),
-                      
-                      IconButton(onPressed: () {
-                        deleteDialog(context, index);
-                      }, icon: Icon(Icons.delete, color: Colors.red[900],)),
-                    ],),
-
-                    const SizedBox(height: 5),
-
-                    Row(children: [
-                      Text(checkInt(items[index][6]) 
-                            ?'${formatClass.sizeFormat(int.parse(items[index][6]))}/${TimeSizeFormat().sizeFormat(int.parse(items[index][5]))}'
-                            :'0'),
-
-                      const Spacer(),
-
-                      Text((items[index][7] != '0') 
-                            ?formatClass.sizeFormat((int.parse(items[index][5]))~/int.parse(items[index][7]), 1) + '/ثانیه'
-                            :'0'),
-
-                      const Spacer(),
-
-                      Text((items[index][7] != '0') 
-                            ?formatClass.timeFormat(((int.parse(items[index][6])-int.parse(items[index][5]))/(int.parse(items[index][5])/int.parse(items[index][7]))).toInt())
-                            :'0'),
-                      
-                    ],),
-
-                    const SizedBox(height: 5,),
-
-                    Expanded(
-                      child: LinearProgressIndicator(
-                        value: checkInt(items[index][6])
-                          ?(int.parse(items[index][5])/int.parse(items[index][6]))
-                          :0,
-                        minHeight: 5,
-                      ),
-                    ),
-                  
-                    const SizedBox(height: 5)
-                    
-                  ],
-                ),
-              )
+            return DownloadingCard(
+              downloadDetails: items[index],
+              queueCall: () {
+                setSituation(index, 'queue');
+              },
+              stopCall: () {
+                setSituation(index, 'stopped');
+              },
+              deleteDialogCall: () {
+                deleteDialog(context, index);
+              },
+              openFileCall: () {
+                openFile(index);
+              },
             );
         
           },
-        ))
+        )
+      )
     );
   }
 }

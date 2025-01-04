@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:noarman_professional_downloader/components/settings_button.dart';
+import 'package:noarman_professional_downloader/pages/other/about_page.dart';
+import 'package:noarman_professional_downloader/pages/other/interface_page.dart';
+import 'package:noarman_professional_downloader/utils/animated_page_route.dart';
 
 class SettingsPage extends StatefulWidget {
   
@@ -12,9 +15,6 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
 
-  static const platform = MethodChannel('app.channel/intent');
-
-
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -23,38 +23,24 @@ class _SettingsPageState extends State<SettingsPage> {
         body: SafeArea(
           child: Column(
             children: [
-              ElevatedButton(
-                onPressed: () async {
-
-                  try {
-                    await platform.invokeMethod('openMarket');
-                  } on PlatformException catch (e) {
-                    print("Failed to open Market: ${e.message}");
-                  }
-
-                },
-                style: const ButtonStyle(elevation: WidgetStatePropertyAll(0)),
-                child: const Column(
-                  children: [
-
-                    SizedBox(height: 10),
-
-                    Row(
-                      children: [
-                    
-                        Icon(Icons.star),
-                    
-                        SizedBox(width: 5),
-                    
-                        Text('ارسال نظر', style: TextStyle(fontSize: 15))
-                      ],
-                    ),
-
-                    SizedBox(height: 10)
-                  ],
-                )
-              ),
-      
+              SettingsButton(
+                title: 'نما',
+                subTitle: 'قالب کاربری، رنگ‌ها', 
+                icon: Icons.palette, 
+                onCallback: () {
+                  Navigator.of(context).push(
+                    AnimatedPageRoute.fadeThrough(const InterfacePage()),
+                  );
+              }),
+              SettingsButton(
+                title: 'درباره',
+                subTitle: 'ارتباط با ما، ارسال نظر، دیگر برنامه‌ها', 
+                icon: Icons.person, 
+                onCallback: () {
+                  Navigator.of(context).push(
+                    AnimatedPageRoute.fadeThrough(const AboutPage()),
+                  );
+              }),
             ],
           ),
         )

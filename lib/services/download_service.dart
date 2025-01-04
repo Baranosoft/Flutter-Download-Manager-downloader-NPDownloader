@@ -37,12 +37,13 @@ class MyTaskHandler extends TaskHandler {
   void onStart(DateTime timestamp) async {
 
     await initData();
-  
-    print('Service started');
     
   }
 
 
+  // این فانکشن به صورت دوره‌ای هر ۵۵ثانیه یک بار اجرا می‌شود
+
+  // زمان حال را می‌گیرد و با زمان دانلودهای زمان‌بندی شده مقایسه می‌کند
   @override
   void onRepeatEvent(DateTime timestamp) async {
 
@@ -50,18 +51,17 @@ class MyTaskHandler extends TaskHandler {
       await getNowTime();
       await sheduledDownloadsCheck();
       await queueDownloadsCheck();
-    } else {
-      print('download list is empty');
     }
 
   }
 
 
+  //دانلودهای زمان‌بندی شده بررسی می‌شوند تا در صورت رسیدن به زمان معین
+  //به دانلودهای در صف اضافه شوند
   Future<void> sheduledDownloadsCheck() async {
 
     if (downloadList != []) {
       for (int i = 0; i < downloadList.length; i++) {
-        print(downloadList[i][3].toString() + '=' + now!);
         if (downloadList[i][3] == now && downloadList[i][4] == 'scheduled') {
           await setSituation(i, 'queue');
         }
@@ -72,6 +72,10 @@ class MyTaskHandler extends TaskHandler {
   }
 
 
+  // لیست دانلودها چک می‌شوند تا در صورت وجود دانلود در صف
+  // این دانلود شروع شود و وضعیت آن به در حال دانلود تغییر کند
+
+  // البته ابتدا بررسی می‌شود که دانلودی در حال انجام نباشد
   Future<void> queueDownloadsCheck() async {
 
     if (await checkDownloading() == false) {
@@ -79,8 +83,6 @@ class MyTaskHandler extends TaskHandler {
       if (downloadList != []) {
         bool isQueueDownload = false;
         for (int i = 0; i < downloadList.length; i++) {
-          print('this is downloadlist situation');
-          print(downloadList[i][4]);
           if (downloadList[i][4] == 'queue') {
             await downloadTask(i);
             isQueueDownload = true;
@@ -93,14 +95,12 @@ class MyTaskHandler extends TaskHandler {
           }
         }
       }
-      
-    } else {
-      print('dio is downloading');
     }
 
   }
 
 
+  // این تایمر برای این است تا هر یک ثانیه یکبار حجم دانلود شده جدید ارسال شود
   Future<void> storageProgressTimer() async {
     storageProgress = false;
     await Future.delayed(const Duration(seconds: 1));
@@ -108,6 +108,7 @@ class MyTaskHandler extends TaskHandler {
   }
 
 
+  // ذخیره داده در متغیر داده و بررسی وضعیت دانلود در حال بارگیری
   Future<void> initData() async {
 
     data = null;
@@ -124,6 +125,7 @@ class MyTaskHandler extends TaskHandler {
   }
 
 
+  // دریافت زمان فعلی
   Future<void> getNowTime() async {
     DateTime nowTime = DateTime.now();
     String formattedTime = DateFormat('HH:mm').format(nowTime);
@@ -131,15 +133,15 @@ class MyTaskHandler extends TaskHandler {
   }
 
 
+  // دریافت داده‌ها از شیردپرفرنس
   Future<SharedPreferencesAsync> getData() async {
     SharedPreferencesAsync newData = SharedPreferencesAsync();
     return newData;
   }
 
 
+  // تبدیل داده‌های نامنظم به لیست
   Future<void> processEachKey() async {
-
-    print(data);
 
     keys = await data!.getKeys();
 
@@ -150,7 +152,6 @@ class MyTaskHandler extends TaskHandler {
         List<String>? value = await data!.getStringList(key);
 
         if (value != null && value.length > 4) {
-          print(value);
           if (value[4] == 'queue' || value[4] == 'downloading' || value[4] == 'stopped' || value[4] == 'scheduled') {
             downloadList.add(value);
             downloadListKeys.add(key);
@@ -161,6 +162,7 @@ class MyTaskHandler extends TaskHandler {
   }
 
 
+  // بررسی اینکه آیا دانلودی در حال انجام است
   Future<bool> checkDownloading() async {
 
     bool downloading = false;
@@ -174,6 +176,7 @@ class MyTaskHandler extends TaskHandler {
   }
 
 
+  // لغو دانلود
   Future<void> cancelDownload(int index) async {
     if (cancelToken != null) {
       cancelToken!.cancel('Download canceled by user.');
@@ -184,9 +187,9 @@ class MyTaskHandler extends TaskHandler {
   }
 
 
+  // ساخت فایل جدید بر مبنای بخش دانلود شده جدید به علاوه بخشی که قبلا دانلود شده در صورت وجود
   Future<void> fileCreation(int index) async {
 
-    print('the key is: ');
     List<String> fileCreate = downloadList[index];
     file = File('${fileCreate[2]}/temp${fileCreate[1]}');
 
@@ -198,6 +201,7 @@ class MyTaskHandler extends TaskHandler {
   }
 
 
+  // فانکشن دانلود فایل
   Future<void> downloadTask(index) async {
 
     cancelToken?.cancel('canceled download');
@@ -234,7 +238,6 @@ class MyTaskHandler extends TaskHandler {
           downloadList[index][0],
           '${downloadList[index][2]}/temp${downloadList[index][1]}',
           onReceiveProgress: (int count, int total) {
-            print('$count $total');
             if(count != -1 && storageProgress) {
               downloadDuration ++;
               setProgress(index, (count + downloadedBytes).toString(), downloadDuration);
@@ -272,7 +275,6 @@ class MyTaskHandler extends TaskHandler {
           downloadList[index][0],
           '${downloadList[index][2]}/${downloadList[index][1]}',
           onReceiveProgress: (int count, int total) {
-            print('$count $total');
             if(count != -1 && storageProgress) {
               downloadDuration ++;
               setProgress(index, (count).toString(), downloadDuration);
@@ -291,7 +293,6 @@ class MyTaskHandler extends TaskHandler {
         if (CancelToken.isCancel(e)) {
           
         } else {
-          print('Download failed: $e');
           setSituation(index, 'failed');
         }
         
@@ -302,6 +303,7 @@ class MyTaskHandler extends TaskHandler {
   }
 
 
+  // این فانکشن بخشی که در گذشته دانلود شده را به دانلود فعلی پیوند میزند
   Future<void> appendFile(String tempFilePath, String filePath) async {
     File file = File(filePath);
     RandomAccessFile raf = await file.open(mode: FileMode.append);
@@ -314,10 +316,9 @@ class MyTaskHandler extends TaskHandler {
   }
   
 
-
+  // تغییر وضعیت دانلود
   Future<void> setSituation(int index, String situation) async {
 
-    print('set Situation is Tuninggggggg');
     List<String>? value = downloadList[index];
     String theKey = value[2] + value[1];
     await data!.setStringList(theKey, [value[0], value[1], value[2], value[3], situation, value[5], value[6], value[7]]);
@@ -328,9 +329,9 @@ class MyTaskHandler extends TaskHandler {
   }
 
 
+  // تعین اندازه فایل دانلودی
   Future<void> setFileSize(int index, String size) async {
 
-    print('set Situation is Tuninggggggg');
     List<String>? value = downloadList[index];
     String theKey = value[2] + value[1];
     await data!.setStringList(theKey, [value[0], value[1], value[2], value[3], value[4], value[5], size, value[7]]);
@@ -340,6 +341,7 @@ class MyTaskHandler extends TaskHandler {
   }
 
 
+  // تعیین پیشرفت دانلود
   Future<void> setProgress(int index, String progress, int newDuration) async {
 
     List<String>? value = downloadList[index];
@@ -371,17 +373,17 @@ class MyTaskHandler extends TaskHandler {
   @override
   void onNotificationPressed() {
     FlutterForegroundTask.launchApp('/');
-    print('onNotificationPressed');
+
   }
 
   @override
   void onNotificationDismissed() {
-    print('onNotificationDismissed');
+
   }
 
   @override
   void onDestroy(DateTime timestamp) {
-    print('onDestroy');
+
   }
 
 }

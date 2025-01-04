@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:noarman_professional_downloader/components/downloaded_card.dart';
 import 'package:noarman_professional_downloader/utils/delete_file.dart';
 import 'package:noarman_professional_downloader/utils/time_size_format.dart';
 import 'dart:ui' as ui;
@@ -19,8 +20,11 @@ class Downloadedpage extends StatefulWidget {
 class _DownloadedpageState extends State<Downloadedpage> {
 
   SharedPreferencesAsync data = SharedPreferencesAsync();
-  List<List<String>> downloadList = [];
+  Timer? _timer;
 
+  List<List<String>> downloadList = [];
+  Set<String> keys = {};
+  Set<String> downloadListKeys = {};
   List<List<String>> items = [];
 
   var formatClass = TimeSizeFormat();
@@ -32,10 +36,13 @@ class _DownloadedpageState extends State<Downloadedpage> {
   void initState() {
     super.initState();
     _loadData();
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) => updateData());
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -48,7 +55,6 @@ class _DownloadedpageState extends State<Downloadedpage> {
     
     setState(() {
       items = downloadList;
-      print(items);
     });
   }
 
@@ -62,22 +68,52 @@ class _DownloadedpageState extends State<Downloadedpage> {
   // در این بخش دینا دریافت شده و بخش های مورد نظر در دانلود لیست ذخیره می‌شوند
   Future<void> processEachKey() async {
 
-    Set<String> keys = await data.getKeys();
+    keys = await data.getKeys();
 
     downloadList.clear();
     
-    for (String key in keys) {
+    if(keys.isNotEmpty) {
+      for (String key in keys) {
 
-      List<String>? list = await data.getStringList(key);
+        List<String>? list = await data.getStringList(key);
 
-      if (list != null) {
-        if (list[4] == 'completed' || list[4] == 'failed') {
-          downloadList.add(list);
+        if (list != null) {
+          if (list[4] == 'completed' || list[4] == 'failed') {
+            downloadList.add(list);
+            downloadListKeys.add(key);
+          }
         }
-      } else {
-        print('No data found for key: $key');
       }
     }
+    
+  }
+
+
+  Future<void> updateData() async {
+    await downloadListUpdate();
+
+    if (mounted) {
+      setState(() {
+        items = downloadList;
+      });
+    }
+  }
+
+
+  Future<void> downloadListUpdate() async {
+
+    downloadList.clear();
+
+    for (String key in downloadListKeys) {
+      List<String>? value = await data.getStringList(key);
+
+      if (value != null && value.length > 4) {
+        if (value[4] == 'completed' || value[4] == 'failed') {
+          downloadList.add(value);
+        }
+      }
+    }
+
   }
 
 
@@ -215,7 +251,7 @@ class _DownloadedpageState extends State<Downloadedpage> {
           ),
           actions: <Widget>[
             Align(alignment: Alignment.centerRight, child: TextButton(
-              child: Text('حذف', style: TextStyle(color: Colors.red[800])),
+              child: Text('حذف', style: TextStyle(color: Theme.of(context).colorScheme.error)),
               onPressed: () {
                 deleteDownload(index, false);
                 Navigator.of(context).pop();
@@ -223,7 +259,7 @@ class _DownloadedpageState extends State<Downloadedpage> {
             ),),
             
             Align(alignment: Alignment.centerRight, child: TextButton(
-              child: Text('حذف به همراه فایل', style: TextStyle(color: Colors.red[800])),
+              child: Text('حذف به همراه فایل', style: TextStyle(color: Theme.of(context).colorScheme.error)),
               onPressed: () {
                 deleteDownload(index, true);
                 Navigator.of(context).pop();
@@ -259,6 +295,10 @@ class _DownloadedpageState extends State<Downloadedpage> {
                   width: 300,
                   child: SvgPicture.asset(
                     'assets/svg/empty_downloaded.svg',
+                    colorFilter: ColorFilter.mode(
+                      Theme.of(context).colorScheme.primaryFixedDim, // تنظیم رنگ
+                      BlendMode.modulate,
+                    ),
                   ),
                 ),
                 
@@ -270,9 +310,7 @@ class _DownloadedpageState extends State<Downloadedpage> {
         )
 
         : SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 0, left: 5, right: 5, top: 10),
-            child: Column(
+          child: Column(
               children: [
                 Expanded(
                   child: ListView.builder(
@@ -280,65 +318,21 @@ class _DownloadedpageState extends State<Downloadedpage> {
                     itemBuilder: (context, index) {
                       return Padding(
                         padding: const EdgeInsets.all(4.0),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          ),
-                          onPressed: () {
+                        child: DownloadedCard(
+                          title: items[index][1],
+                          situation: items[index][4],
+                          onClick: () {
                             openFile(index);
                           },
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Expanded(  // ستون را پر می‌کند تا محتوای داخل آن به راست بچسبد
-                                child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(0, 5, 0, 0),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        items[index][1],
-                                        textAlign: formatClass.textAlign(items[index][1][0]),
-                                        style: const TextStyle(fontSize: 15, color: Colors.black),
-                                        overflow: TextOverflow.ellipsis,
-                                        softWrap: false,
-                                        maxLines: 2,
-                                      ),
-                                      Align(
-                                        alignment: Alignment.centerRight,  // آیکون‌ها را به راست تراز می‌کند
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              onPressed: () {
-                                                detailsDialog(context, index);
-                                              },
-                                              icon: const Icon(Icons.more_vert),
-                                            ),
-                                            
-                                            IconButton(
-                                              onPressed: () {
-                                                deleteDialog(context, index);
-                                              },
-                                              icon: const Icon(Icons.delete),
-                                            ),
-                                            if (items[index][4] == 'failed')
-                                              IconButton(
-                                                onPressed: () {
-                                                  setSituation(index, 'queue');
-                                                },
-                                                icon: const Icon(Icons.refresh),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          onMoreClick: () {
+                            detailsDialog(context, index);
+                          },
+                          onDeleteClick: () {
+                            deleteDialog(context, index);
+                          },
+                          onRedownloadClick: () {
+                            setSituation(index, 'queue');
+                          },
                         ),
                       );
                     },
@@ -347,7 +341,6 @@ class _DownloadedpageState extends State<Downloadedpage> {
                 ),
               ],
             ),
-          ),
         ),
       ),
     );
